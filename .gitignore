@@ -1,0 +1,5 @@
+**/.terraform
+**/*.tfstate
+**/*.tfstate.backup
+**/pw
+**/ka.yaml

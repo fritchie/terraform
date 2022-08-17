@@ -8,7 +8,7 @@ variable "hosts" {
 
 variable "hostname_format" {
 	type    = string
-	default = "ks-k8m%02d"
+	default = "ks-k8c%02d"
 }
 
 resource "libvirt_volume" "base_vol" {
@@ -21,21 +21,21 @@ resource "libvirt_volume" "base_vol" {
 
 data "template_file" "user_data" {
 	count    = var.hosts
-	template = file("${path.module}/cloud_init_m${count.index + 1}.cfg")
+	template = file("${path.module}/cloud_init_c${count.index + 1}.cfg")
 }
 
 resource "libvirt_cloudinit_disk" "cloud_init" {
 	count     = var.hosts
-	name      = "cloudinit_master${count.index + 1}.iso"
+	name      = "cloudinit_control${count.index + 1}.iso"
 	user_data = data.template_file.user_data[count.index].rendered
 	pool      = "default"
 }
 
-resource "libvirt_domain" "ks-k8m" {
+resource "libvirt_domain" "ks-k8c" {
 	count     = var.hosts
 	name      = format(var.hostname_format, count.index + 1)
-	memory    = "2048"
-	vcpu      = 2
+	memory    = "4096"
+	vcpu      = 4
 	cloudinit = libvirt_cloudinit_disk.cloud_init[count.index].id
 
 	cpu = {

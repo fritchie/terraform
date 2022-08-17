@@ -3,38 +3,46 @@ provider "libvirt" {
 }
 
 variable "hosts" {
-	default = 1
+	default = 3
 }
 
 variable "hostname_format" {
 	type    = string
-	default = "ks-k8m%02d"
+	default = "ks-k8n%02d"
 }
 
 resource "libvirt_volume" "base_vol" {
 	count  = var.hosts
 	name   = "${format(var.hostname_format, count.index + 1)}"
 	format = "qcow2"
-	source = "/mnt/libvirt/CentOS-8-GenericCloud-8.1.1911-20200113.3.x86_64.qcow2"
+	source = "/mnt/libvirt/CentOS-7-x86_64-GenericCloud-2003.qcow2"
 	pool   = "default"
+}
+
+resource "libvirt_volume" "data_vol" {
+	count  = var.hosts
+	name   = "${format(var.hostname_format, count.index + 1)}-data"
+	format = "raw"
+	pool   = "default"
+	size   = 10737418240
 }
 
 data "template_file" "user_data" {
 	count    = var.hosts
-	template = file("${path.module}/cloud_init_m${count.index + 1}.cfg")
+	template = file("${path.module}/cloud_init_n${count.index + 1}-c7.cfg")
 }
 
 resource "libvirt_cloudinit_disk" "cloud_init" {
 	count     = var.hosts
-	name      = "cloudinit_master${count.index + 1}.iso"
+	name      = "cloudinit_node${count.index + 1}.iso"
 	user_data = data.template_file.user_data[count.index].rendered
 	pool      = "default"
 }
 
-resource "libvirt_domain" "ks-k8m" {
+resource "libvirt_domain" "ks-k8n" {
 	count     = var.hosts
 	name      = format(var.hostname_format, count.index + 1)
-	memory    = "2048"
+	memory    = "4096"
 	vcpu      = 2
 	cloudinit = libvirt_cloudinit_disk.cloud_init[count.index].id
 
@@ -42,13 +50,17 @@ resource "libvirt_domain" "ks-k8m" {
 		mode = "host-passthrough"
 	}
 
-
 	network_interface {
 		bridge = "br0"
 	}
 
 	disk {
 		volume_id = element(libvirt_volume.base_vol.*.id, count.index)
+		scsi      = "true"
+	}
+
+	disk {
+		volume_id = element(libvirt_volume.data_vol.*.id, count.index)
 		scsi      = "true"
 	}
 
@@ -64,5 +76,5 @@ resource "libvirt_domain" "ks-k8m" {
 }
 
 terraform {
-  required_version = ">= 0.12"
+	required_version = ">= 0.12"
 }

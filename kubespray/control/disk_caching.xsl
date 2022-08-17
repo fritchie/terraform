@@ -11,7 +11,7 @@
 
   <xsl:template match="disk[@type='volume']/driver">
     <xsl:copy>
-      <xsl:attribute name="cache">writeback</xsl:attribute>
+      <xsl:attribute name="cache">none</xsl:attribute>
       <xsl:apply-templates select="@*|node()"/>
     </xsl:copy>
   </xsl:template>

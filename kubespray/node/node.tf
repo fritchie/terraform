@@ -8,7 +8,7 @@ variable "hosts" {
 
 variable "hostname_format" {
 	type    = string
-	default = "ks-k8w%02d"
+	default = "ks-k8n%02d"
 }
 
 resource "libvirt_volume" "base_vol" {
@@ -27,19 +27,27 @@ resource "libvirt_volume" "data_vol" {
 	size   = 10737418240
 }
 
+resource "libvirt_volume" "data2_vol" {
+	count  = var.hosts
+	name   = "${format(var.hostname_format, count.index + 1)}-data2"
+	format = "raw"
+	pool   = "default"
+	size   = 10737418240
+}
+
 data "template_file" "user_data" {
 	count    = var.hosts
-	template = file("${path.module}/cloud_init_w${count.index + 1}.cfg")
+	template = file("${path.module}/cloud_init_n${count.index + 1}.cfg")
 }
 
 resource "libvirt_cloudinit_disk" "cloud_init" {
 	count     = var.hosts
-	name      = "cloudinit_worker${count.index + 1}.iso"
+	name      = "cloudinit_node${count.index + 1}.iso"
 	user_data = data.template_file.user_data[count.index].rendered
 	pool      = "default"
 }
 
-resource "libvirt_domain" "ks-k8w" {
+resource "libvirt_domain" "ks-k8n" {
 	count     = var.hosts
 	name      = format(var.hostname_format, count.index + 1)
 	memory    = "4096"
@@ -61,6 +69,11 @@ resource "libvirt_domain" "ks-k8w" {
 
 	disk {
 		volume_id = element(libvirt_volume.data_vol.*.id, count.index)
+		scsi      = "true"
+	}
+
+	disk {
+		volume_id = element(libvirt_volume.data2_vol.*.id, count.index)
 		scsi      = "true"
 	}
 
